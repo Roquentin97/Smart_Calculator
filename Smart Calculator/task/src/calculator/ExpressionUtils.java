@@ -1,6 +1,7 @@
 package calculator;
 
-import java.lang.reflect.Array;
+import calculator.exceptions.ParenthesesMismatchException;
+
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -34,6 +35,32 @@ public class ExpressionUtils {
     }
 
     /**
+     * @param expression Arithmetical expression
+     * @return The same expression <i>whitespaces</i> and with missing multiplication signs around braces.
+     */
+    public static String putMissingMultSigns(String expression) {
+        expression = expression.replaceAll(" ", "");
+        StringBuilder sb = new StringBuilder(expression);
+        Pattern lP = Pattern.compile("\\d\\(");
+        Pattern rP = Pattern.compile("\\)[\\d|\\(]");
+
+        int counter = 0;
+
+        Matcher lM = lP.matcher(expression);
+        while (lM.find())
+            sb.insert(lM.end() - 1 + counter++, Operators.MULT );
+
+        expression = sb.toString();
+        counter = 0;
+
+        Matcher rM = rP.matcher(expression);
+        while (rM.find())
+            sb.insert(rM.start() + 1 + counter++, Operators.MULT);
+
+        return sb.toString();
+    }
+
+    /**
      * Takes an expression in standard (infix) notation and returns the same expression in postfix notation.
      * @see <a href="https://en.wikipedia.org/wiki/Reverse_Polish_notation">Reverse Polish Notation</a>
      * @param infixExpression Expression in standard (infix) notation, e.g.: (2 + 3) * 5
@@ -43,58 +70,59 @@ public class ExpressionUtils {
     // TODO handle negative numbers
     public static List<String> infixToPostfix(String infixExpression) {
 
-        infixExpression = eliminateRedundancy(infixExpression);
+        infixExpression = putMissingMultSigns(eliminateRedundancy(infixExpression));
 
         var list = new ArrayList<String>();
         var stack = new ArrayDeque<Operators>();
 
-        Pattern digit = Pattern.compile("\\d+");
-        Pattern notDigit = Pattern.compile("\\D");
-        Matcher mDigit = digit.matcher(infixExpression);
-        Matcher mNotDigit = notDigit.matcher(infixExpression);
+        // Uses regex lookbehind to spot negative numbers after signs  +, -, *, /, (,
+        String numberRegex = "((?<![a-zA-Z0-9\\)])-(\\d+(\\.\\d+)?|[a-zA-Z]+)" +
+                // spots negative numbers at the very beginning of the line or positive number
+                "|^-(\\d+(\\.\\d+)?|[a-zA-Z]+)|(\\d+(\\.\\d+)?|[a-zA-Z]+))";
+
+        // Spots operators excluding unary minus
+        String operatorRegex = "([\\+\\*\\\\(\\)\\^/]|(?<=\\d|\\)|[a-zA-Z])-)";
+
+        var matcher = Pattern.compile(numberRegex+"|"+operatorRegex).matcher(infixExpression);
 
         Operators operator;
-
-
-
-        while (true) {
-
-            if (mDigit.find())
-                list.add(mDigit.group());
-
-            handleOperator(mNotDigit, stack, o -> list.add(o.getValue()));
-
-            if (mDigit.hitEnd() && mNotDigit.hitEnd())
-                break;
+        String match;
+        while (matcher.find()) {
+            match = matcher.group();
+            if (match.matches(numberRegex)) {
+                list.add(match);
+            }
+            else {
+                handleOperator(match, stack, o -> list.add(o.getValue()));
+            }
         }
 
         while (!stack.isEmpty())
             list.add(stack.pop().getValue());
+
+        if (list.contains("("))
+            throw new ParenthesesMismatchException();
 
         return list;
     }
 
     /**
      *
-     * @param nonDigit Matcher handling operators
+     * @param operator String representing operator
      * @param stack Stack where operators are placed
      * @param action Consumer accepting operators popped from stack
      *
      * Depending on the priorities of participating operators decides whether push
      * operator to the stack or exchange it with already present in stack operators
      */
-    private static void handleOperator(Matcher nonDigit, Deque<Operators> stack, Consumer<Operators> action) {
-        Operators operator;
-        if (nonDigit.find()) {
-            operator = Operators.byValue(nonDigit.group());
-            if (stack.peek() == null || stack.peek().getPriority() < operator.getPriority() || operator == Operators.LEFT_PH) {
-                stack.push(operator);
-            }
-            else {
-                exchangeWithStack(stack, action, operator);
-                if (operator == Operators.RIGHT_PH)
-                    handleOperator(nonDigit, stack, action);
-            }
+    private static void handleOperator(String operator, Deque<Operators> stack, Consumer<Operators> action) {
+
+        Operators op = Operators.byValue(operator);
+        if (stack.peek() == null || stack.peek().getPriority() < op.getPriority() || op == Operators.LEFT_PH) {
+            stack.push(op);
+        }
+        else {
+            exchangeWithStack(stack, action, op);
         }
     }
 
@@ -133,16 +161,18 @@ public class ExpressionUtils {
                     stack.push(operator);
                 }
             }
+        } else {
+            stack.push(operator);
         }
 
     }
 
 
-
-
     public static void main(String[] args) {
 
-        System.out.println(infixToPostfix("3 - 5 * 1 / 5 - 4 * 3 * ( 8 - 4)"));
+        String expression = "1 + 2 * (21 / 5) ^ (43 + 12)";
+        System.out.println(infixToPostfix(expression));
+
     }
 
 

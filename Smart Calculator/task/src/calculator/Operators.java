@@ -6,7 +6,8 @@ public enum Operators {
     ADD("+", 1),
     SUB("-", 1),
     MULT("*", 2),
-    DIV("/", 2);
+    DIV("/", 2),
+    POW("^", 3);
 
     private int priority;
     private String value;
@@ -30,6 +31,8 @@ public enum Operators {
                 return LEFT_PH;
             case ")":
                 return RIGHT_PH;
+            case "^":
+                return POW;
             default:
                 throw new IllegalArgumentException("Unsupported operator: " + value);
         }

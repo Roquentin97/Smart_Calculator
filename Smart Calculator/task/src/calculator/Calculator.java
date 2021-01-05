@@ -1,32 +1,38 @@
 package calculator;
 
-import java.io.InputStream;
+import calculator.exceptions.IllegalSyntaxException;
+
+import java.math.BigDecimal;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class Calculator {
 
     private List<String> postfixExpression;
     private String expression;
 
+    private HashMap<String, BigDecimal> variables = new HashMap<>();
     public void readExpression(String expression) {
         this.expression = expression;
         this.postfixExpression = ExpressionUtils.infixToPostfix(expression);
     }
 
-    public Double calculate() {
+    public BigDecimal calculate() {
 
         if (postfixExpression.isEmpty()) {
             throw new IllegalStateException("No expression is given. Use readExpression method first or pass expression as an argument.");
         }
 
-        var stack = new ArrayDeque<Double>();
+        var stack = new ArrayDeque<BigDecimal>();
 
         for ( var s : this.postfixExpression) {
             if (s.matches("-?\\d+\\.*\\d*")) {
-                stack.push(Double.parseDouble(s));
-            } else {
+                stack.push(new BigDecimal(s));
+            } else if (s.matches("[a-zA-Z]+")) {
+                BigDecimal variable = variables.get(s);
+                if (variable == null)
+                    throw new IllegalArgumentException("Unknown argument");
+                stack.push(variable);
+            }  else {
                 operate(stack, Operators.byValue(s));
             }
         }
@@ -38,7 +44,7 @@ public class Calculator {
         return stack.pop();
     }
 
-    public Double calculate(String expression) {
+    public BigDecimal calculate(String expression) {
         readExpression(expression);
         return calculate();
     }
@@ -47,36 +53,56 @@ public class Calculator {
         return expression;
     }
 
-    private void operate(Deque<Double> stack, Operators operator) {
+    private void operate(Deque<BigDecimal> stack, Operators operator) {
         // todo unary operators here
 
-        double x2 = stack.pop();
-        double x1 = stack.pop();
+        BigDecimal x2 = stack.pop();
+        BigDecimal x1 = stack.pop();
 
         switch (operator) {
             case ADD:
-                stack.push(x1 + x2);
+                stack.push(x1.add(x2));
                 break;
             case SUB:
-                stack.push(x1 - x2);
+                stack.push(x1.subtract(x2));
                 break;
             case MULT:
-                stack.push(x1 * x2);
+                stack.push(x1.multiply(x2));
                 break;
             case DIV:
-                stack.push(x1 / x2);
+                stack.push(x1.divide(x2));
+                break;
+            case POW:
+                if (x2.compareTo(new BigDecimal(Integer.MAX_VALUE)) > 0)
+                    throw new IllegalArgumentException("Too big value");
+                stack.push(x1.pow(x2.intValue()));
                 break;
             default:
                 throw  new UnsupportedOperationException("Unknown operator: " + operator);
         }
 
     }
+    private void substituteVariables(String expression) {
+
+    }
+
+    public void setVariables(Map<String, BigDecimal> values) {
+        values.forEach((s, n) -> {
+            variables.put(s, n);
+        });
+    }
+    public  BigDecimal putVariable(String name, BigDecimal value) {
+        return variables.put(name, value);
+    }
+
+    public BigDecimal getVariable(String name) {
+        return variables.get(name);
+    }
+    public void resetVariables() {variables.clear();}
+
 
     public static void main(String[] args) {
-        Calculator calculator = new Calculator();
 
-        calculator.readExpression("3");
-        System.out.println(calculator.calculate());
     }
 
 

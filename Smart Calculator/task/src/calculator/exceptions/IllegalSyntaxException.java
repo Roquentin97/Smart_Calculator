@@ -1,4 +1,4 @@
-package calculator;
+package calculator.exceptions;
 
 import java.util.IllegalFormatException;
 
