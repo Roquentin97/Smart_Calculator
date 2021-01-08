@@ -59,27 +59,8 @@ public class Calculator {
         BigDecimal x2 = stack.pop();
         BigDecimal x1 = stack.pop();
 
-        switch (operator) {
-            case ADD:
-                stack.push(x1.add(x2));
-                break;
-            case SUB:
-                stack.push(x1.subtract(x2));
-                break;
-            case MULT:
-                stack.push(x1.multiply(x2));
-                break;
-            case DIV:
-                stack.push(x1.divide(x2));
-                break;
-            case POW:
-                if (x2.compareTo(new BigDecimal(Integer.MAX_VALUE)) > 0)
-                    throw new IllegalArgumentException("Too big value");
-                stack.push(x1.pow(x2.intValue()));
-                break;
-            default:
-                throw  new UnsupportedOperationException("Unknown operator: " + operator);
-        }
+        stack.push(operator.executeBig(x1, x2));
+
 
     }
     private void substituteVariables(String expression) {

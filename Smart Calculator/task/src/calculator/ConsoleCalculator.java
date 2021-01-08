@@ -92,9 +92,7 @@ public class ConsoleCalculator {
                     } else if (!input.matches(expressionPattern)) {
                         throw new IllegalSyntaxException();
                     } else {
-                        //todo casting to integer for test passing only
-                        BigInteger result = calculator.calculate(input).toBigInteger();
-                        System.out.println(result);
+                        System.out.println(calculator.calculate(input));
                     }
                 } catch (IllegalSyntaxException ex) {
                     System.out.println("Invalid expression");
